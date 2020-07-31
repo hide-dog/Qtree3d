@@ -10,16 +10,13 @@ function main()
     # 構造体メモリ
     memori = Int(1.0e6)
     
-
-
     # ----------------------------------------------------------
     # 変数はないはず
     # ----------------------------------------------------------
     out_file,in_file,n_div,s_x,e_x,n_x,s_y,e_y,n_y,s_z,e_z,n_z = input_para(PARAMDAT)
+    main_pre(n_x,n_y,s_x,e_x,s_y,e_y,s_z,e_z,n_z)
 
     nodes, nodes_num, element, element_shape = read_allgrid(in_file)
-
-    main_pre(n_x,n_y,s_x,e_x,s_y,e_y)
 
     println("nodes    : "*string(size(nodes)[1]))
     println("elements : "*string(size(element)[1]))
@@ -99,9 +96,9 @@ function main()
             y[j] = nodes[element[i,j],2]
             z[j] = nodes[element[i,j],3]
 
-            cell_center[i,1] += 0.25*x[j]
-            cell_center[i,2] += 0.25*y[j]
-            cell_center[i,3] += 0.25*z[j]
+            cell_center[i,1] += x[j] / loop
+            cell_center[i,2] += y[j] / loop
+            cell_center[i,3] += z[j] / loop
         end
         
         maxx = maximum(x)
@@ -264,6 +261,7 @@ function main()
 
     # 分割した空間がセルと当たるか否かの判定
     atari = zeros(Int64,n_x,n_y,n_z)
+    
     for i in 1:n_x
         for j in 1:n_y
             for k in 1:n_z
@@ -288,10 +286,11 @@ function main()
                     miny = minimum(y)
                     maxz = maximum(z)
                     minz = minimum(z)
-
+                    
                     x = new_cell_center[i,j,k,1]
                     y = new_cell_center[i,j,k,2]
                     z = new_cell_center[i,j,k,3]
+                    
 
                     if minx < x && x < maxx
                         if miny < y && y < maxy

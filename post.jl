@@ -12,7 +12,7 @@ end
     
 function write_file(outdir,inresult_dir,front,back)
 
-    nodes_xmax, nodes_ymax = read_nodenum(1)
+    nodes_xmax, nodes_ymax, nodes_zmax = read_nodenum(1)
     nodes = read_nodes(1)
 
     elements = read_elements(1)
@@ -25,9 +25,8 @@ function write_file(outdir,inresult_dir,front,back)
         end
     end
 
-
     inf = readdir(inresult_dir)
-    cellnum = (nodes_xmax-3)*(nodes_ymax-3)
+    cellnum = (nodes_xmax-3)*(nodes_ymax-3)*(nodes_zmax-3)
     rho = zeros(cellnum)
     u = zeros(cellnum)
     v = zeros(cellnum)
@@ -85,8 +84,9 @@ function read_nodenum(skipnum)
     temp = split(fff[2]," ")
     xmax = parse(Int64,temp[1]) 
     ymax = parse(Int64,temp[2]) 
+    zmax = parse(Int64,temp[3])
     
-    return xmax, ymax
+    return xmax, ymax, zmax
 end
 
 function read_nodes(skipnum)
@@ -111,7 +111,7 @@ function read_nodes(skipnum)
         # z = parse(Float64,temp[3])
         x = parse(Float64,temp[2])
         y = parse(Float64,temp[3])
-        z = 0.0
+        z = parse(Float64,temp[4])
         nodes[i,1] = x
         nodes[i,2] = y
         nodes[i,3] = z
@@ -120,6 +120,9 @@ function read_nodes(skipnum)
 end 
 
 function read_elements(skipnum)
+    dim = 3
+    a = 2^dim
+
     fff=[]
     open("grid_morton/element_forvtk", "r") do f
         fff=read(f,String)
@@ -131,14 +134,12 @@ function read_elements(skipnum)
         fff[i]=replace(fff[i]," \r" => "")
     end
 
-    elements = zeros(num_elements,4)
+    elements = zeros(num_elements,a)
     for i in 1:num_elements
         temp=split(fff[i+skipnum]," ")
-
-        elements[i,1] = parse(Int64,temp[2])-1
-        elements[i,2] = parse(Int64,temp[3])-1
-        elements[i,3] = parse(Int64,temp[4])-1
-        elements[i,4] = parse(Int64,temp[5])-1
+        for j in 1:a
+            elements[i,j] = parse(Int64,temp[j+1])-1
+        end
     end
     return elements
 end 
@@ -186,26 +187,32 @@ end
 
 function write_cells(elements,atari,out_file,outdir,atarinum)
     a = size(elements)[1]
-    b = a*5
+    b = a*9                                     # dim !!!
     a_st = @sprintf("%1.0f", atarinum)
-    b_st = @sprintf("%1.0f", atarinum*5)
+    b_st = @sprintf("%1.0f", atarinum*9)         # dim !!!
+
+    dim = 3
+    dimnum = 2^dim
+    dimnum1 = 12
 
     fff = outdir*"/"*out_file
     open(fff,"a") do f
         write(f, "CELLS "*a_st*" "*b_st*"\n")
         for i in 1:a
             if atari[i] > 0
-                d1 = @sprintf("%1.0f", elements[i,1])
-                d2 = @sprintf("%1.0f", elements[i,2])
-                d3 = @sprintf("%1.0f", elements[i,3])
-                d4 = @sprintf("%1.0f", elements[i,4])
-                write(f, "4 "*d1*" "*d2*" "*d3*" "*d4*"\n")
+                write(f, string(dimnum))
+                    
+                for j in 1:dimnum
+                    d = @sprintf("%1.0f", elements[i,j])
+                    write(f," "*d)
+                end
+                write(f,"\n")
             end
         end
         write(f, "CELL_TYPES "*a_st*"\n")
         for i in 1:a
             if atari[i] > 0
-                write(f, "9\n")          #四角のみ
+                write(f, string(dimnum1)*"\n")          #四角のみ
             end
         end
     end     

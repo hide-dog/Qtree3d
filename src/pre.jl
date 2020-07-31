@@ -1,11 +1,13 @@
 using Printf
 
-function main_pre(n_x,n_y,s_x,e_x,s_y,e_y)
+function main_pre(n_x,n_y,s_x,e_x,s_y,e_y,s_z,e_z,n_z)
     xy_or_r = 1          # 1:x,y 2:r,t
     xnum = n_x           #       2:rnum
     ynum = n_y           #       2:tnum
+    znum = n_z           #       2:tnum
     lenx = abs(e_x-s_x)           #       2:inr
     leny = abs(e_y-s_y)           #       2:outr
+    lenz = abs(e_z-s_z)           #       2:outr
     st_ang  = -1/2*pi       # 2:angle
     en_ang  = -3/2*pi          # 2:angle
 
@@ -15,10 +17,10 @@ function main_pre(n_x,n_y,s_x,e_x,s_y,e_y)
     make_dir(result)
     result = "post_result_morton"
     make_dir(result)
-    nodes, xnum_max, ynum_max = mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
+    nodes, xnum_max, ynum_max, znum_max = mk_gird(xnum,ynum,znum,lenx,leny,lenz,xy_or_r,s_x,s_y,s_z,st_ang,en_ang,outdir)
 end
 
-function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
+function mk_gird(xnum,ynum,znum,lenx,leny,lenz,xy_or_r,s_x,s_y,s_z,st_ang,en_ang,outdir)
     """
     nodes[i,j,k]
     i   : x,r方向の番号
@@ -33,27 +35,22 @@ function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
     """
     xnum_max = xnum+1+2
     ynum_max = ynum+1+2
-    nodes = zeros(xnum_max, ynum_max, 3)
+    znum_max = znum+1+2
+    nodes = zeros(xnum_max, ynum_max, znum_max,3)
     if xy_or_r == 1
         for i in 2:xnum_max-1
             for j in 2:ynum_max-1
-                x = lenx/(xnum)*(i-2) + s_x
-                y = leny/(ynum)*(j-2) + s_y
-                nodes[i,j,1] = x
-                nodes[i,j,2] = y
+                for k in 2:znum_max-1
+                    x = lenx/(xnum)*(i-2) + s_x
+                    y = leny/(ynum)*(j-2) + s_y
+                    z = lenz/(znum)*(k-2) + s_z
+                    nodes[i,j,k,1] = x
+                    nodes[i,j,k,2] = y
+                    nodes[i,j,k,3] = z
+                end
             end 
         end
-    elseif xy_or_r == 2
-        for i in 2:xnum_max-1
-            for j in 2:ynum_max-1
-                r = lenx + (leny-lenx)/ynum*(j-2)
-                theta = st_ang - (st_ang-en_ang)/xnum*(i-2)
-                x = r * cos(theta)
-                y = r * sin(theta)
-                nodes[i,j,1]=x
-                nodes[i,j,2]=y
-            end 
-        end
+    
     end
 
     #=
@@ -62,6 +59,7 @@ function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
     ベクトルで考えれば下記のような計算になる．たぶん
     また、[1,1]等の角にはダミー値が入っている.
     =#
+    #=
     for j in 1:ynum_max
         for k in 1:2
             nodes[1,j,k]        =  1.01*nodes[2,j,k] - 0.01*nodes[3,j,k]
@@ -74,7 +72,9 @@ function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
             nodes[i,ynum_max,k] =  1.01*nodes[i,ynum_max-1,k] - 0.01*nodes[i,ynum_max-2,k]
         end
     end
-
+    =#
+    
+    #=
     fff=outdir*"/nodes"
     open(fff,"w") do f
         write(f,"nodes: xnum, ynum , x, y\n")
@@ -87,21 +87,24 @@ function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
         end
     end
     println("write "*fff)
+    =#
 
     # nodes_forvtk
-    nodes_num = zeros(Int,xnum_max, ynum_max)
+    nodes_num = zeros(Int,xnum_max, ynum_max, znum_max)
     fff=outdir*"/nodes_forvtk"
     open(fff,"w") do f
         write(f,"nodes: xnum, ynum , x, y\n")
-        k=1
+        a=1
         for i in 2:xnum_max-1
             for j in 2:ynum_max-1
-                x = @sprintf("%8.8e", nodes[i,j,1])
-                y = @sprintf("%8.8e", nodes[i,j,2])
-                z = @sprintf("%8.8e", nodes[i,j,3])
-                write(f,string(k)*" "*x*" "*y*" "*z*"\n")
-                nodes_num[i,j] = k
-                k = k+1
+                for k in 2:znum_max-1
+                    x = @sprintf("%8.8e", nodes[i,j,k,1])
+                    y = @sprintf("%8.8e", nodes[i,j,k,2])
+                    z = @sprintf("%8.8e", nodes[i,j,k,3])
+                    write(f,string(a)*" "*x*" "*y*" "*z*"\n")
+                    nodes_num[i,j,k] = a
+                    a = a+1
+                end
             end
         end
     end
@@ -110,28 +113,34 @@ function mk_gird(xnum,ynum,lenx,leny,xy_or_r,s_x,s_y,st_ang,en_ang,outdir)
     fff=outdir*"/nodesnum"
     open(fff,"w") do f
         write(f,"nodesnum: xnum_max, ynum_max\n")
-        write(f,string(xnum_max)*" "*string(ynum_max)*"\n")
+        write(f,string(xnum_max)*" "*string(ynum_max)*" "*string(znum_max)*"\n")
     end
 
     ### element ###
     fff=outdir*"/element_forvtk"
     open(fff,"w") do f
-        write(f,"elements:cell_xnum, lup,rup,ldown,rdown \n")
-        k=1
+        write(f,"elements:cell_xnum, l1,l2,l3,l4,u1,u2,u3,u4 \n")
+        a=1
         for i in 2:xnum_max-2
             for j in 2:ynum_max-2
-                d1 = @sprintf("%1.0f", nodes_num[i,j])
-                d2 = @sprintf("%1.0f", nodes_num[i,j+1])
-                d3 = @sprintf("%1.0f", nodes_num[i+1,j+1])
-                d4 = @sprintf("%1.0f", nodes_num[i+1,j])
-                write(f,string(k)*" "*d1*" "*d2*" "*d3*" "*d4*"\n")
-                k = k+1
+                for k in 2:znum_max-2
+                    write(f,string(a))
+                    for l in 1:2
+                        d1 = @sprintf("%1.0f", nodes_num[i  ,j  ,k+(l-1)])
+                        d2 = @sprintf("%1.0f", nodes_num[i  ,j+1,k+(l-1)])
+                        d3 = @sprintf("%1.0f", nodes_num[i+1,j+1,k+(l-1)])
+                        d4 = @sprintf("%1.0f", nodes_num[i+1,j  ,k+(l-1)])
+                        write(f," "*d1*" "*d2*" "*d3*" "*d4)
+                    end
+                    write(f,"\n")
+                    a = a+1
+                end
             end
         end
     end
     println("write "*fff)
 
-    return  nodes,xnum_max,ynum_max
+    return  nodes,xnum_max,ynum_max,znum_max
 end
 
 function make_dir(outdir)
