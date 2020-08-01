@@ -8,7 +8,7 @@ function main()
     expantion = 10
     
     # 構造体メモリ
-    memori = Int(1.0e6)
+    memori = Int(5.0e6)
     
     # ----------------------------------------------------------
     # 変数はないはず
@@ -303,6 +303,32 @@ function main()
             end
         end
     end
+
+    # 修正当たり判定
+    #=
+    atari_temp = zeros(n_x,n_y,n_z)
+    for i in 2:n_x-1
+        for j in 2:n_y-1
+            for k in 2:n_z-1
+                if atari[i,j,k] == 0 && atari[i+1,j,k] ==1 && atari[i,j+1,k] ==1 && atari[i-1,j,k] ==1 && atari[i,j-1,k] ==1 && atari[i,j,k+1] ==1 && atari[i,j,k-1] ==1
+                    atari_temp[i,j,k] = 1
+                else atari[i,j,k] == 1 && atari[i+1,j,k] ==0 && atari[i,j+1,k] ==0 && atari[i-1,j,k] ==0 && atari[i,j-1,k] ==0 && atari[i,j,k+1] ==0 && atari[i,j,k-1] ==0
+                    atari_temp[i,j,k] = 0
+                end
+            end
+        end
+    end
+    
+    for i in 2:n_x-1
+        for j in 2:n_y-1
+            for k in 2:n_z-1
+                atari[i,j,k] = atari[i,j,k] * atari_temp[i,j,k]
+            end
+        end
+    end
+    =#
+
+
 
     # output
     fff = "grid_morton/atari"
